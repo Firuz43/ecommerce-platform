@@ -1,9 +1,11 @@
-version: '3.8'
+version: "3.9"
 
 services:
+
   postgres:
     image: postgres:16-alpine
-    container_name: ecommerce_db
+    container_name: ecommerce_postgres
+    restart: always
     environment:
       POSTGRES_DB: ecommerce
       POSTGRES_USER: dev_user
@@ -11,27 +13,33 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dev_user -d ecommerce"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      - pgdata:/var/lib/postgresql/data
 
   redis:
     image: redis:7-alpine
-    container_name: ecommerce_cache
+    container_name: ecommerce_redis
     ports:
       - "6379:6379"
 
-  # Optional: Adminer for database GUI (lightweight)
   adminer:
     image: adminer
     container_name: ecommerce_adminer
     ports:
       - "8081:8080"
+
+  backend:
+    build: ./backend
+    container_name: ecommerce_backend
+    ports:
+      - "8080:8080"
     depends_on:
       - postgres
+      - redis
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ecommerce
+      SPRING_DATASOURCE_USERNAME: dev_user
+      SPRING_DATASOURCE_PASSWORD: dev_password
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
 
 volumes:
-  postgres_data:
+  pgdata:
